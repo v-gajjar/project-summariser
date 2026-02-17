@@ -1,32 +1,47 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Card, CardContent } from "./components/ui/card";
+import { Input } from "./components/ui/input";
+import { Button } from "./components/ui/button";
 
-function App() {
-  const [message, setMessage] = useState("Loading...");
+export default function App() {
+  const [input, setInput] = useState("");
+  const [response, setResponse] = useState("Enter some text and submit...");
 
-  useEffect(() => {
-    fetch("/api/test")
-      .then((res) => res.json())
-      .then((data) => {
-        setMessage(data.message);
-      })
-      .catch(() => {
-        setMessage("Error connecting to server");
+  const handleSubmit = async () => {
+    try {
+      const res = await fetch("/api/echo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: input }),
       });
-  }, []);
+      const data = await res.json();
+      setResponse(data.echo);
+    } catch {
+      setResponse("Error connecting to server");
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <Card className="w-full max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl">
-        <CardContent className="flex flex-col items-center justify-center p-6">
-          <h1 className="text-4xl font-bold text-blue-600 mb-4 text-center">
-            Backend Test
-          </h1>
-          <p className="text-lg text-gray-700 text-center">{message}</p>
+      <Card className="w-full max-w-md shadow-lg rounded-lg">
+        <CardContent className="p-6 flex flex-col items-center gap-4">
+          {/* ShadCN Input */}
+          <Input
+            type="text"
+            placeholder="Type something..."
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            className="w-full"
+          />
+
+          {/* ShadCN Button */}
+          <Button onClick={handleSubmit} className="w-full">
+            Submit
+          </Button>
+
+          <p className="mt-4 text-gray-700 text-center">{response}</p>
         </CardContent>
       </Card>
     </div>
   );
 }
-
-export default App;
