@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { Textarea } from "./components/ui/textarea";
 import { Button } from "./components/ui/button";
+import { Copy, Check } from "lucide-react";
 
 type SummaryResponse = {
   projectSummary: string;
@@ -13,6 +14,8 @@ export default function App() {
   const [data, setData] = useState<SummaryResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copiedSummary, setCopiedSummary] = useState(false);
+  const [copiedSkills, setCopiedSkills] = useState(false);
 
   const handleSubmit = async () => {
     if (!input.trim()) return;
@@ -39,6 +42,21 @@ export default function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const copySummary = async () => {
+    if (!data) return;
+    await navigator.clipboard.writeText(data.projectSummary);
+    setCopiedSummary(true);
+    setTimeout(() => setCopiedSummary(false), 1500);
+  };
+
+  const copySkills = async () => {
+    if (!data) return;
+    const skillsText = data.keySkills.join(", ");
+    await navigator.clipboard.writeText(skillsText);
+    setCopiedSkills(true);
+    setTimeout(() => setCopiedSkills(false), 1500);
   };
 
   return (
@@ -70,27 +88,58 @@ export default function App() {
           </div>
 
           {/* ERROR */}
-          {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+          {error && (
+            <p className="text-sm text-red-500 text-center">{error}</p>
+          )}
 
           {/* OUTPUT SECTION */}
           {data && (
             <div className="border-t pt-6 space-y-5">
               {/* Summary */}
               <div>
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-                  Project Summary
-                </h3>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Project Summary
+                  </h3>
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={copySummary}
+                  >
+                    {copiedSummary ? (
+                      <Check className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+
                 <p className="text-sm leading-relaxed text-gray-800">
                   {data.projectSummary}
                 </p>
               </div>
 
-              {/* Skills as chips */}
+              {/* Skills */}
               {data.keySkills.length > 0 && (
                 <div>
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-                    Key Skills
-                  </h3>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Key Skills
+                    </h3>
+
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={copySkills}
+                    >
+                      {copiedSkills ? (
+                        <Check className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
 
                   <div className="flex flex-wrap gap-2">
                     {data.keySkills.map((skill) => (
