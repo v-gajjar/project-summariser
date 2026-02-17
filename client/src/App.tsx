@@ -4,9 +4,8 @@ import { Textarea } from "./components/ui/textarea";
 import { Button } from "./components/ui/button";
 
 type SummaryResponse = {
-  portfolioCard: string;
-  cvBullet: string;
-  readmeIntro: string;
+  projectSummary: string;
+  keySkills: string[];
 };
 
 export default function App() {
@@ -69,24 +68,23 @@ export default function App() {
             <div className="space-y-4 pt-4">
               <div>
                 <h3 className="font-semibold text-sm text-muted-foreground">
-                  Portfolio Card
+                  Project Summary
                 </h3>
-                <p>{data.portfolioCard}</p>
+                <p>{data.projectSummary}</p>
               </div>
 
-              <div>
-                <h3 className="font-semibold text-sm text-muted-foreground">
-                  CV Bullet
-                </h3>
-                <p>{data.cvBullet}</p>
-              </div>
-
-              <div>
-                <h3 className="font-semibold text-sm text-muted-foreground">
-                  README Intro
-                </h3>
-                <p>{data.readmeIntro}</p>
-              </div>
+              {data.keySkills.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-sm text-muted-foreground">
+                    Key Skills
+                  </h3>
+                  <ul className="list-disc list-inside text-sm">
+                    {data.keySkills.map((skill) => (
+                      <li key={skill}>{skill}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
