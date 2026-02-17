@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Card, CardContent } from "./components/ui/card";
 
 function App() {
   const [message, setMessage] = useState("Loading...");
@@ -15,9 +16,15 @@ function App() {
   }, []);
 
   return (
-    <div className="p-8 bg-gray-100 min-h-screen flex flex-col items-center justify-center">
-      <h1 className="text-4xl font-bold text-blue-600 mb-4">Backend Test</h1>
-      <p className="text-lg text-gray-700">{message}</p>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <Card className="w-full max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl">
+        <CardContent className="flex flex-col items-center justify-center p-6">
+          <h1 className="text-4xl font-bold text-blue-600 mb-4 text-center">
+            Backend Test
+          </h1>
+          <p className="text-lg text-gray-700 text-center">{message}</p>
+        </CardContent>
+      </Card>
     </div>
   );
 }
