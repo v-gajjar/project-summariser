@@ -15,9 +15,9 @@ function App() {
   }, []);
 
   return (
-    <div>
-      <h1>Backend Test</h1>
-      <p>{message}</p>
+    <div className="p-8 bg-gray-100 min-h-screen flex flex-col items-center justify-center">
+      <h1 className="text-4xl font-bold text-blue-600 mb-4">Backend Test</h1>
+      <p className="text-lg text-gray-700">{message}</p>
     </div>
   );
 }
