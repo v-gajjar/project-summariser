@@ -25,7 +25,7 @@ export default function App() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <Card className="w-full max-w-md shadow-lg rounded-lg">
         <CardContent className="p-6 flex flex-col items-center gap-4">
-          {/* ShadCN Input */}
+          
           <Input
             type="text"
             placeholder="Type something..."
@@ -34,7 +34,6 @@ export default function App() {
             className="w-full"
           />
 
-          {/* ShadCN Button */}
           <Button onClick={handleSubmit} className="w-full">
             Submit
           </Button>
