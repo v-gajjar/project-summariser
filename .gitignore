@@ -36,6 +36,13 @@ dist-ssr
 Thumbs.db
 
 # -------------------------
+# Cursor
+# -------------------------
+.cursorrules
+.cursorignore
+.cursorignore
+
+# -------------------------
 # Optional: lock files
 # -------------------------
 # Uncomment if you do NOT want lock files in repo
