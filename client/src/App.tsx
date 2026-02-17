@@ -96,30 +96,15 @@ export default function App() {
         </CardHeader>
 
         <CardContent className="flex flex-col gap-4 overflow-y-auto p-6">
-          {/* INPUT */}
+          {/* INPUT / ORIGINAL INPUT CARD */}
           <div className="space-y-3">
-            {data ? (
-              <div className="rounded-xl border bg-white p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Original Input
-                  </h2>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setData(null);
-                      setError(null);
-                      setCopiedSummary(false);
-                      setCopiedSkills(false);
-                      setInput(originalInput ?? "");
-                    }}
-                  >
-                    Edit input
-                  </Button>
-                </div>
-                <p className="mt-2 text-sm leading-relaxed text-gray-800 whitespace-pre-wrap">
-                  {originalInput ?? ""}
+            {data && originalInput ? (
+              <div className="rounded-xl border bg-gray-100 p-4">
+                <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                  Original Input
+                </h2>
+                <p className="text-sm leading-relaxed text-gray-800 whitespace-pre-wrap">
+                  {originalInput}
                 </p>
               </div>
             ) : (
