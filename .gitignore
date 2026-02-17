@@ -1,0 +1,51 @@
+# -------------------------
+# Node
+# -------------------------
+node_modules
+**/node_modules
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# -------------------------
+# Build outputs
+# -------------------------
+dist
+dist-ssr
+.vite
+*.local
+*.cache
+
+# -------------------------
+# Editor and OS
+# -------------------------
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+Thumbs.db
+
+# -------------------------
+# Optional: lock files
+# -------------------------
+# Uncomment if you do NOT want lock files in repo
+# package-lock.json
+# pnpm-lock.yaml
+# yarn.lock
+
+# -------------------------
+# Misc
+# -------------------------
+.env
+.env.local
+.env.*.local
