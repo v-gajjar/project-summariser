@@ -18,6 +18,7 @@ type SummaryResponse = {
 
 export default function App() {
   const [input, setInput] = useState("");
+  const [originalInput, setOriginalInput] = useState<string | null>(null);
   const [data, setData] = useState<SummaryResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,12 +32,15 @@ export default function App() {
     setLoading(true);
     setError(null);
     setData(null);
+    setOriginalInput(null);
+    const submittedText = input;
+    setOriginalInput(submittedText);
 
     try {
       const res = await fetch("/api/summarise", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: input }),
+        body: JSON.stringify({ text: submittedText }),
       });
 
       if (!res.ok) throw new Error("Server error");
@@ -45,6 +49,7 @@ export default function App() {
       setData(json);
     } catch {
       setError("Failed to connect to server");
+      setOriginalInput(null);
     } finally {
       setLoading(false);
     }
@@ -93,15 +98,43 @@ export default function App() {
         <CardContent className="flex flex-col gap-4 overflow-y-auto p-6">
           {/* INPUT */}
           <div className="space-y-3">
-            <Textarea
-              placeholder="Describe your project..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              className="min-h-[120px] resize-none"
-            />
-            <Button onClick={handleSubmit} disabled={loading} className="w-full">
-              {loading ? "Generating..." : "Generate Summary"}
-            </Button>
+            {data ? (
+              <div className="rounded-xl border bg-white p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Original Input
+                  </h2>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setData(null);
+                      setError(null);
+                      setCopiedSummary(false);
+                      setCopiedSkills(false);
+                      setInput(originalInput ?? "");
+                    }}
+                  >
+                    Edit input
+                  </Button>
+                </div>
+                <p className="mt-2 text-sm leading-relaxed text-gray-800 whitespace-pre-wrap">
+                  {originalInput ?? ""}
+                </p>
+              </div>
+            ) : (
+              <>
+                <Textarea
+                  placeholder="Describe your project..."
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  className="min-h-[120px] resize-none"
+                />
+                <Button onClick={handleSubmit} disabled={loading} className="w-full">
+                  {loading ? "Generating..." : "Generate Summary"}
+                </Button>
+              </>
+            )}
           </div>
 
           {/* ERROR */}
