@@ -2,12 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { Textarea } from "./components/ui/textarea";
 import { Button } from "./components/ui/button";
-import {
-  Copy,
-  Check,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react";
+import { Copy, Check, ChevronDown, ChevronUp } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -30,17 +25,9 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [simplifying, setSimplifying] = useState(false);
-  const [originalSummaryForUndo, setOriginalSummaryForUndo] =
-    useState<SummaryResponse | null>(null);
-  const [hasSimplified, setHasSimplified] = useState(false);
-  const [hasReverted, setHasReverted] = useState(false);
-
-  const [impacting, setImpacting] = useState(false);
-  const [impactBaseSummary, setImpactBaseSummary] =
-    useState<SummaryResponse | null>(null);
-  const [hasImpactified, setHasImpactified] = useState(false);
-  const [hasRevertedImpact, setHasRevertedImpact] = useState(false);
+  const [transforming, setTransforming] = useState(false);
+  const [originalSummary, setOriginalSummary] = useState<SummaryResponse | null>(null);
+  const [appliedTransform, setAppliedTransform] = useState<"simplify" | "impact" | null>(null);
 
   const [copiedSummary, setCopiedSummary] = useState(false);
   const [copiedSkills, setCopiedSkills] = useState(false);
@@ -52,12 +39,8 @@ export default function App() {
     setError(null);
     setData(null);
     setExpandedInput(false);
-    setOriginalSummaryForUndo(null);
-    setHasSimplified(false);
-    setHasReverted(false);
-    setImpactBaseSummary(null);
-    setHasImpactified(false);
-    setHasRevertedImpact(false);
+    setOriginalSummary(null);
+    setAppliedTransform(null);
 
     const submittedText = input;
     setOriginalInput(submittedText);
@@ -115,89 +98,47 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
     setTimeout(() => setCopiedSkills(false), 1500);
   };
 
-  const handleSimplifyToggle = async () => {
-    if (!data || !originalInput || simplifying || impacting) return;
+  const handleTransform = async (type: "simplify" | "impact") => {
+    if (!data || !originalInput || transforming || appliedTransform) return;
 
-    // First click: simplify (server call)
-    if (!hasSimplified) {
-      setOriginalSummaryForUndo(data);
-      setSimplifying(true);
-      setError(null);
+    setTransforming(true);
+    setError(null);
+    setOriginalSummary(data); // store current summary for undo
 
-      try {
-        const res = await fetch("/api/summarise/less-technical", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            text: originalInput,
-            projectSummary: data.projectSummary,
-            keySkills: data.keySkills,
-          }),
-        });
+    try {
+      const endpoint =
+        type === "simplify"
+          ? "/api/summarise/less-technical"
+          : "/api/summarise/more-impactful";
 
-        if (!res.ok) throw new Error("Server error");
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: originalInput,
+          projectSummary: data.projectSummary,
+          keySkills: data.keySkills,
+        }),
+      });
 
-        const json: SummaryResponse = await res.json();
-        setData(json);
-        setHasSimplified(true);
-      } catch {
-        setError("Failed to simplify summary");
-        setOriginalSummaryForUndo(null);
-      } finally {
-        setSimplifying(false);
-      }
+      if (!res.ok) throw new Error("Server error");
 
-      return;
-    }
-
-    // Second click: one-time undo back to original (no server call)
-    if (hasSimplified && !hasReverted && originalSummaryForUndo) {
-      setData(originalSummaryForUndo);
-      setHasReverted(true);
-      return;
+      const json: SummaryResponse = await res.json();
+      setData(json);
+      setAppliedTransform(type);
+    } catch {
+      setError(type === "simplify" ? "Failed to simplify summary" : "Failed to make summary more impactful");
+      setOriginalSummary(null);
+    } finally {
+      setTransforming(false);
     }
   };
 
-  const handleImpactToggle = async () => {
-    if (!data || !originalInput || impacting || simplifying) return;
-
-    // First click: make more impactful (server call)
-    if (!hasImpactified) {
-      setImpactBaseSummary(data);
-      setImpacting(true);
-      setError(null);
-
-      try {
-        const res = await fetch("/api/summarise/more-impactful", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            text: originalInput,
-            projectSummary: data.projectSummary,
-            keySkills: data.keySkills,
-          }),
-        });
-
-        if (!res.ok) throw new Error("Server error");
-
-        const json: SummaryResponse = await res.json();
-        setData(json);
-        setHasImpactified(true);
-      } catch {
-        setError("Failed to make summary more impactful");
-        setImpactBaseSummary(null);
-      } finally {
-        setImpacting(false);
-      }
-
-      return;
-    }
-
-    // Second click: one-time undo back to original (no server call)
-    if (hasImpactified && !hasRevertedImpact && impactBaseSummary) {
-      setData(impactBaseSummary);
-      setHasRevertedImpact(true);
-      return;
+  const handleUndo = () => {
+    if (originalSummary) {
+      setData(originalSummary);
+      setAppliedTransform(null);
+      setOriginalSummary(null);
     }
   };
 
@@ -327,41 +268,32 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
                     variant="outline"
                     size="sm"
                     className="hover:bg-gray-100 transition-colors"
-                    onClick={handleSimplifyToggle}
-                    disabled={
-                      simplifying ||
-                      impacting ||
-                      (hasSimplified && hasReverted)
-                    }
+                    onClick={() => handleTransform("simplify")}
+                    disabled={transforming || appliedTransform !== null}
                   >
-                    {simplifying
-                      ? "Rewriting..."
-                      : !hasSimplified
-                      ? "Make it less technical"
-                      : hasReverted
-                      ? "Original restored"
-                      : "Revert to original wording"}
+                    Make it less technical
                   </Button>
 
                   <Button
                     variant="outline"
                     size="sm"
                     className="hover:bg-gray-100 transition-colors"
-                    onClick={handleImpactToggle}
-                    disabled={
-                      impacting ||
-                      simplifying ||
-                      (hasImpactified && hasRevertedImpact)
-                    }
+                    onClick={() => handleTransform("impact")}
+                    disabled={transforming || appliedTransform !== null}
                   >
-                    {impacting
-                      ? "Rewriting..."
-                      : !hasImpactified
-                      ? "Make it more impactful"
-                      : hasRevertedImpact
-                      ? "Original restored"
-                      : "Revert to original wording"}
+                    Make it more impactful
                   </Button>
+
+                  {appliedTransform && originalSummary && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="hover:bg-gray-100 transition-colors"
+                      onClick={handleUndo}
+                    >
+                      Revert to original
+                    </Button>
+                  )}
                 </div>
               </section>
 
