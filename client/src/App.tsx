@@ -139,6 +139,7 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
       setData(originalSummary);
       setAppliedTransform(null);
       setOriginalSummary(null);
+      // Undo re-enables refinement buttons automatically
     }
   };
 
