@@ -2,7 +2,12 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { Textarea } from "./components/ui/textarea";
 import { Button } from "./components/ui/button";
-import { Copy, Check } from "lucide-react";
+import {
+  Copy,
+  Check,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 
 import {
   DropdownMenu,
@@ -19,6 +24,8 @@ type SummaryResponse = {
 export default function App() {
   const [input, setInput] = useState("");
   const [originalInput, setOriginalInput] = useState<string | null>(null);
+  const [expandedInput, setExpandedInput] = useState(false);
+
   const [data, setData] = useState<SummaryResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +39,8 @@ export default function App() {
     setLoading(true);
     setError(null);
     setData(null);
-    setOriginalInput(null);
+    setExpandedInput(false);
+
     const submittedText = input;
     setOriginalInput(submittedText);
 
@@ -55,10 +63,10 @@ export default function App() {
     }
   };
 
-  // Copy handlers with explicit mode
   const copySummary = async (mode: "text" | "html") => {
     if (!data) return;
-    const text =
+
+    const output =
       mode === "html"
         ? `<section aria-labelledby="summary-heading">
   <h2 id="summary-heading">Project Summary</h2>
@@ -66,24 +74,25 @@ export default function App() {
 </section>`
         : data.projectSummary;
 
-    await navigator.clipboard.writeText(text);
+    await navigator.clipboard.writeText(output);
     setCopiedSummary(true);
     setTimeout(() => setCopiedSummary(false), 1500);
   };
 
   const copySkills = async (mode: "text" | "html") => {
     if (!data) return;
-    const text =
+
+    const output =
       mode === "html"
         ? `<section aria-labelledby="skills-heading">
   <h2 id="skills-heading">Key Skills</h2>
   <ul>
-    ${data.keySkills.map((s) => `<li>${s}</li>`).join("\n    ")}
+${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
   </ul>
 </section>`
         : data.keySkills.join(", ");
 
-    await navigator.clipboard.writeText(text);
+    await navigator.clipboard.writeText(output);
     setCopiedSkills(true);
     setTimeout(() => setCopiedSkills(false), 1500);
   };
@@ -92,20 +101,54 @@ export default function App() {
     <div className="h-screen flex items-center justify-center bg-gray-50 p-4">
       <Card className="w-full max-w-lg h-full max-h-[90vh] shadow-xl rounded-2xl flex flex-col">
         <CardHeader className="border-b">
-          <CardTitle className="text-center text-2xl">Project Summariser</CardTitle>
+          <CardTitle className="text-center text-2xl">
+            Project Summariser
+          </CardTitle>
         </CardHeader>
 
         <CardContent className="flex flex-col gap-4 overflow-y-auto p-6">
-          {/* INPUT / ORIGINAL INPUT CARD */}
+          {/* INPUT OR ORIGINAL INPUT CARD */}
           <div className="space-y-3">
             {data && originalInput ? (
               <div className="rounded-xl border bg-gray-100 p-4">
                 <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
                   Original Input
                 </h2>
-                <p className="text-sm leading-relaxed text-gray-800 whitespace-pre-wrap">
-                  {originalInput}
-                </p>
+
+                <div
+                  className={`relative transition-all ${
+                    expandedInput ? "" : "max-h-48 overflow-hidden"
+                  }`}
+                >
+                  <p className="text-sm leading-relaxed text-gray-800 whitespace-pre-wrap">
+                    {originalInput}
+                  </p>
+
+                  {!expandedInput && originalInput.length > 400 && (
+                    <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-gray-100 to-transparent pointer-events-none" />
+                  )}
+                </div>
+
+                {originalInput.length > 400 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setExpandedInput(!expandedInput)}
+                    className="mt-3 w-fit flex items-center gap-2 hover:bg-gray-200 transition-colors"
+                  >
+                    {expandedInput ? (
+                      <>
+                        <ChevronUp className="h-4 w-4" />
+                        Collapse
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="h-4 w-4" />
+                        View full input
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
             ) : (
               <>
@@ -115,7 +158,12 @@ export default function App() {
                   onChange={(e) => setInput(e.target.value)}
                   className="min-h-[120px] resize-none"
                 />
-                <Button onClick={handleSubmit} disabled={loading} className="w-full">
+
+                <Button
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className="w-full"
+                >
                   {loading ? "Generating..." : "Generate Summary"}
                 </Button>
               </>
@@ -123,7 +171,9 @@ export default function App() {
           </div>
 
           {/* ERROR */}
-          {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+          {error && (
+            <p className="text-sm text-red-500 text-center">{error}</p>
+          )}
 
           {/* OUTPUT */}
           {data && (
@@ -159,7 +209,10 @@ export default function App() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-                <p className="text-sm leading-relaxed text-gray-800">{data.projectSummary}</p>
+
+                <p className="text-sm leading-relaxed text-gray-800 whitespace-pre-wrap">
+                  {data.projectSummary}
+                </p>
               </section>
 
               {/* SKILLS */}
