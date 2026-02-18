@@ -156,7 +156,7 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
                   placeholder="Describe your project..."
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  className="min-h-[120px] resize-none"
+                  className="min-h-[120px] max-h-[45vh] overflow-y-auto resize-none [field-sizing:fixed]"
                 />
 
                 <Button
