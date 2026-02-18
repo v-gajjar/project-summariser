@@ -76,3 +76,73 @@ export async function generateSummary(text) {
     readmeIntro: projectSummary,
   };
 }
+
+export async function generateLessTechnicalSummary({
+  text,
+  projectSummary,
+  keySkills = [],
+}) {
+  const response = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content:
+          "You rewrite project summaries in clear, less technical language " +
+          "for non-technical stakeholders. Always respond with ONLY valid JSON, no markdown.",
+      },
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text:
+              "You are given a project description and an existing summary. " +
+              "Rewrite the summary so it is less technical and easier to understand, " +
+              "while preserving the key information.\n\n" +
+              "Return a JSON object with the exact fields: " +
+              '"projectSummary" (string, 2-4 sentences, less technical) and ' +
+              '"keySkills" (array of 3-7 short skill strings, updated only if needed).\n\n' +
+              `Project description:\n${text}\n\n` +
+              `Existing summary:\n${projectSummary}\n\n` +
+              `Existing key skills (optional):\n${Array.isArray(keySkills) ? keySkills.join(
+                ", "
+              ) : ""}`,
+          },
+        ],
+      },
+    ],
+  });
+
+  const rawContent = response.choices?.[0]?.message?.content;
+
+  let newProjectSummary = projectSummary;
+  let newKeySkills = keySkills ?? [];
+
+  try {
+    const parsed =
+      typeof rawContent === "string"
+        ? JSON.parse(rawContent)
+        : JSON.parse(rawContent?.[0]?.text ?? "");
+
+    newProjectSummary = parsed.projectSummary ?? newProjectSummary;
+    newKeySkills = Array.isArray(parsed.keySkills) ? parsed.keySkills : newKeySkills;
+  } catch (err) {
+    // Fallback: if parsing fails, treat the raw content as a plain summary
+    newProjectSummary =
+      typeof rawContent === "string"
+        ? rawContent
+        : rawContent?.[0]?.text ?? newProjectSummary;
+  }
+
+  return {
+    projectSummary: newProjectSummary,
+    keySkills: newKeySkills,
+    portfolioCard: newProjectSummary,
+    cvBullet:
+      newKeySkills && newKeySkills.length > 0
+        ? `Key skills: ${newKeySkills.join(", ")}`
+        : newProjectSummary,
+    readmeIntro: newProjectSummary,
+  };
+}

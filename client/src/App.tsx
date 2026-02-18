@@ -30,6 +30,8 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [simplifying, setSimplifying] = useState(false);
+
   const [copiedSummary, setCopiedSummary] = useState(false);
   const [copiedSkills, setCopiedSkills] = useState(false);
 
@@ -95,6 +97,34 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
     await navigator.clipboard.writeText(output);
     setCopiedSkills(true);
     setTimeout(() => setCopiedSkills(false), 1500);
+  };
+
+  const handleSimplify = async () => {
+    if (!data || !originalInput) return;
+
+    setSimplifying(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/summarise/less-technical", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: originalInput,
+          projectSummary: data.projectSummary,
+          keySkills: data.keySkills,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Server error");
+
+      const json: SummaryResponse = await res.json();
+      setData(json);
+    } catch {
+      setError("Failed to simplify summary");
+    } finally {
+      setSimplifying(false);
+    }
   };
 
   return (
@@ -217,6 +247,16 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
                 <p className="text-sm leading-relaxed text-gray-800 whitespace-pre-wrap">
                   {data.projectSummary}
                 </p>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 hover:bg-gray-100 transition-colors"
+                  onClick={handleSimplify}
+                  disabled={simplifying}
+                >
+                  {simplifying ? "Rewriting..." : "Make it less technical"}
+                </Button>
               </section>
 
               {/* SKILLS */}
