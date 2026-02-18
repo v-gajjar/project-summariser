@@ -111,13 +111,38 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
           <div className="space-y-3">
             {data && originalInput ? (
               <div className="rounded-xl border bg-gray-100 p-4">
-                <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-                  Original Input
-                </h2>
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Original Input
+                  </h2>
+
+                  {originalInput.length > 400 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setExpandedInput(!expandedInput)}
+                      className="flex items-center gap-1 hover:bg-gray-200 transition-colors"
+                    >
+                      {expandedInput ? (
+                        <>
+                          <ChevronUp className="h-4 w-4" />
+                          Collapse
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="h-4 w-4" />
+                          View full input
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
 
                 <div
                   className={`relative transition-all ${
-                    expandedInput ? "" : "max-h-48 overflow-hidden"
+                    expandedInput
+                      ? "max-h-[60vh] overflow-y-auto"
+                      : "max-h-48 overflow-hidden"
                   }`}
                 >
                   <p className="text-sm leading-relaxed text-gray-800 whitespace-pre-wrap">
@@ -128,27 +153,6 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
                     <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-gray-100 to-transparent pointer-events-none" />
                   )}
                 </div>
-
-                {originalInput.length > 400 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setExpandedInput(!expandedInput)}
-                    className="mt-3 w-fit flex items-center gap-2 hover:bg-gray-200 transition-colors"
-                  >
-                    {expandedInput ? (
-                      <>
-                        <ChevronUp className="h-4 w-4" />
-                        Collapse
-                      </>
-                    ) : (
-                      <>
-                        <ChevronDown className="h-4 w-4" />
-                        View full input
-                      </>
-                    )}
-                  </Button>
-                )}
               </div>
             ) : (
               <>
