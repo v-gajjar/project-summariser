@@ -36,6 +36,12 @@ export default function App() {
   const [hasSimplified, setHasSimplified] = useState(false);
   const [hasReverted, setHasReverted] = useState(false);
 
+  const [impacting, setImpacting] = useState(false);
+  const [impactBaseSummary, setImpactBaseSummary] =
+    useState<SummaryResponse | null>(null);
+  const [hasImpactified, setHasImpactified] = useState(false);
+  const [hasRevertedImpact, setHasRevertedImpact] = useState(false);
+
   const [copiedSummary, setCopiedSummary] = useState(false);
   const [copiedSkills, setCopiedSkills] = useState(false);
 
@@ -49,6 +55,9 @@ export default function App() {
     setOriginalSummaryForUndo(null);
     setHasSimplified(false);
     setHasReverted(false);
+    setImpactBaseSummary(null);
+    setHasImpactified(false);
+    setHasRevertedImpact(false);
 
     const submittedText = input;
     setOriginalInput(submittedText);
@@ -107,7 +116,7 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
   };
 
   const handleSimplifyToggle = async () => {
-    if (!data || !originalInput || simplifying) return;
+    if (!data || !originalInput || simplifying || impacting) return;
 
     // First click: simplify (server call)
     if (!hasSimplified) {
@@ -145,6 +154,49 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
     if (hasSimplified && !hasReverted && originalSummaryForUndo) {
       setData(originalSummaryForUndo);
       setHasReverted(true);
+      return;
+    }
+  };
+
+  const handleImpactToggle = async () => {
+    if (!data || !originalInput || impacting || simplifying) return;
+
+    // First click: make more impactful (server call)
+    if (!hasImpactified) {
+      setImpactBaseSummary(data);
+      setImpacting(true);
+      setError(null);
+
+      try {
+        const res = await fetch("/api/summarise/more-impactful", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: originalInput,
+            projectSummary: data.projectSummary,
+            keySkills: data.keySkills,
+          }),
+        });
+
+        if (!res.ok) throw new Error("Server error");
+
+        const json: SummaryResponse = await res.json();
+        setData(json);
+        setHasImpactified(true);
+      } catch {
+        setError("Failed to make summary more impactful");
+        setImpactBaseSummary(null);
+      } finally {
+        setImpacting(false);
+      }
+
+      return;
+    }
+
+    // Second click: one-time undo back to original (no server call)
+    if (hasImpactified && !hasRevertedImpact && impactBaseSummary) {
+      setData(impactBaseSummary);
+      setHasRevertedImpact(true);
       return;
     }
   };
@@ -270,21 +322,47 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
                   {data.projectSummary}
                 </p>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-3 hover:bg-gray-100 transition-colors"
-                  onClick={handleSimplifyToggle}
-                  disabled={simplifying || (hasSimplified && hasReverted)}
-                >
-                  {simplifying
-                    ? "Rewriting..."
-                    : !hasSimplified
-                    ? "Make it less technical"
-                    : hasReverted
-                    ? "Original restored"
-                    : "Revert to original wording"}
-                </Button>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="hover:bg-gray-100 transition-colors"
+                    onClick={handleSimplifyToggle}
+                    disabled={
+                      simplifying ||
+                      impacting ||
+                      (hasSimplified && hasReverted)
+                    }
+                  >
+                    {simplifying
+                      ? "Rewriting..."
+                      : !hasSimplified
+                      ? "Make it less technical"
+                      : hasReverted
+                      ? "Original restored"
+                      : "Revert to original wording"}
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="hover:bg-gray-100 transition-colors"
+                    onClick={handleImpactToggle}
+                    disabled={
+                      impacting ||
+                      simplifying ||
+                      (hasImpactified && hasRevertedImpact)
+                    }
+                  >
+                    {impacting
+                      ? "Rewriting..."
+                      : !hasImpactified
+                      ? "Make it more impactful"
+                      : hasRevertedImpact
+                      ? "Original restored"
+                      : "Revert to original wording"}
+                  </Button>
+                </div>
               </section>
 
               {/* SKILLS */}
