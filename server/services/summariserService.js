@@ -147,6 +147,7 @@ export async function generateLessTechnicalSummary({
   };
 }
 
+
 export async function generateMoreImpactfulSummary({
   text,
   projectSummary,
@@ -217,3 +218,68 @@ export async function generateMoreImpactfulSummary({
     readmeIntro: newProjectSummary,
   };
 }
+
+export async function generateBulletSummary({ text, projectSummary, keySkills = [] }) {
+  const response = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content:
+          "You rewrite project summaries as concise bullet points. " +
+          "Always respond with ONLY valid JSON, no markdown.",
+      },
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text:
+              "You are given a project description and an existing summary. " +
+              "Rewrite the summary as 3-7 concise bullet points. " +
+              "Return a JSON object with the exact fields: " +
+              '"projectSummary" (array of bullet point strings) and ' +
+              '"keySkills" (array of 3-7 short skill strings, updated only if needed).\n\n' +
+              `Project description:\n${text}\n\n` +
+              `Existing summary:\n${projectSummary}\n\n` +
+              `Existing key skills (optional):\n${Array.isArray(keySkills) ? keySkills.join(", ") : ""}`,
+          },
+        ],
+      },
+    ],
+  });
+
+  const rawContent = response.choices?.[0]?.message?.content;
+
+  let newProjectSummary = [];
+  let newKeySkills = keySkills ?? [];
+
+  try {
+    const parsed =
+      typeof rawContent === "string"
+        ? JSON.parse(rawContent)
+        : JSON.parse(rawContent?.[0]?.text ?? "");
+
+    newProjectSummary = Array.isArray(parsed.projectSummary)
+      ? parsed.projectSummary
+      : [projectSummary];
+    newKeySkills = Array.isArray(parsed.keySkills) ? parsed.keySkills : newKeySkills;
+  } catch (err) {
+    // fallback: put original summary in one bullet
+    newProjectSummary = [projectSummary];
+  }
+
+  return {
+    projectSummary: newProjectSummary,
+    keySkills: newKeySkills,
+    portfolioCard: newProjectSummary.join("\n"),
+    cvBullet:
+      newKeySkills && newKeySkills.length > 0
+        ? `Key skills: ${newKeySkills.join(", ")}`
+        : newProjectSummary.join("\n"),
+    readmeIntro: newProjectSummary.join("\n"),
+  };
+}
+
+
+

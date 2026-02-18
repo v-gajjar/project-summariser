@@ -12,7 +12,7 @@ import {
 } from "./components/ui/dropdown-menu";
 
 type SummaryResponse = {
-  projectSummary: string;
+  projectSummary: string | string[]; // can now be array for bullets
   keySkills: string[];
 };
 
@@ -25,13 +25,15 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [transforming, setTransforming] = useState(false);
-  const [originalSummary, setOriginalSummary] = useState<SummaryResponse | null>(null);
-  const [appliedTransform, setAppliedTransform] = useState<"simplify" | "impact" | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [originalSummaryForUndo, setOriginalSummaryForUndo] = useState<SummaryResponse | null>(null);
 
   const [copiedSummary, setCopiedSummary] = useState(false);
   const [copiedSkills, setCopiedSkills] = useState(false);
 
+  // -------------------------
+  // SUBMIT INITIAL SUMMARY
+  // -------------------------
   const handleSubmit = async () => {
     if (!input.trim()) return;
 
@@ -39,8 +41,7 @@ export default function App() {
     setError(null);
     setData(null);
     setExpandedInput(false);
-    setOriginalSummary(null);
-    setAppliedTransform(null);
+    setOriginalSummaryForUndo(null);
 
     const submittedText = input;
     setOriginalInput(submittedText);
@@ -64,16 +65,28 @@ export default function App() {
     }
   };
 
+  // -------------------------
+  // COPY FUNCTIONS
+  // -------------------------
   const copySummary = async (mode: "text" | "html") => {
     if (!data) return;
+
+    const summaryText =
+      Array.isArray(data.projectSummary)
+        ? data.projectSummary.join("\n")
+        : data.projectSummary;
 
     const output =
       mode === "html"
         ? `<section aria-labelledby="summary-heading">
   <h2 id="summary-heading">Project Summary</h2>
-  <p>${data.projectSummary}</p>
+  ${
+    Array.isArray(data.projectSummary)
+      ? `<ul>${data.projectSummary.map((b) => `<li>${b}</li>`).join("")}</ul>`
+      : `<p>${data.projectSummary}</p>`
+  }
 </section>`
-        : data.projectSummary;
+        : summaryText;
 
     await navigator.clipboard.writeText(output);
     setCopiedSummary(true);
@@ -98,19 +111,19 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
     setTimeout(() => setCopiedSkills(false), 1500);
   };
 
-  const handleTransform = async (type: "simplify" | "impact") => {
-    if (!data || !originalInput || transforming || appliedTransform) return;
+  // -------------------------
+  // GENERIC AI ACTION HANDLER
+  // -------------------------
+  const handleAIAction = async (endpoint: string) => {
+    if (!data || !originalInput || actionLoading) return;
 
-    setTransforming(true);
+    // Save original summary for undo if not already saved
+    if (!originalSummaryForUndo) setOriginalSummaryForUndo(data);
+
+    setActionLoading(true);
     setError(null);
-    setOriginalSummary(data); // store current summary for undo
 
     try {
-      const endpoint =
-        type === "simplify"
-          ? "/api/summarise/less-technical"
-          : "/api/summarise/more-impactful";
-
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -125,35 +138,35 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
 
       const json: SummaryResponse = await res.json();
       setData(json);
-      setAppliedTransform(type);
     } catch {
-      setError(type === "simplify" ? "Failed to simplify summary" : "Failed to make summary more impactful");
-      setOriginalSummary(null);
+      setError("Failed to process AI action");
     } finally {
-      setTransforming(false);
+      setActionLoading(false);
     }
   };
 
-  const handleUndo = () => {
-    if (originalSummary) {
-      setData(originalSummary);
-      setAppliedTransform(null);
-      setOriginalSummary(null);
-      // Undo re-enables refinement buttons automatically
-    }
+  // -------------------------
+  // REVERT / UNDO ACTION
+  // -------------------------
+  const handleRevert = () => {
+    if (!originalSummaryForUndo) return;
+
+    setData(originalSummaryForUndo);
+    setOriginalSummaryForUndo(null);
   };
 
+  // -------------------------
+  // RENDER
+  // -------------------------
   return (
     <div className="h-screen flex items-center justify-center bg-gray-50 p-4">
       <Card className="w-full max-w-lg h-full max-h-[90vh] shadow-xl rounded-2xl flex flex-col">
         <CardHeader className="border-b">
-          <CardTitle className="text-center text-2xl">
-            Project Summariser
-          </CardTitle>
+          <CardTitle className="text-center text-2xl">Project Summariser</CardTitle>
         </CardHeader>
 
         <CardContent className="flex flex-col gap-4 overflow-y-auto p-6">
-          {/* INPUT OR ORIGINAL INPUT CARD */}
+          {/* INPUT */}
           <div className="space-y-3">
             {data && originalInput ? (
               <div className="rounded-xl border bg-gray-100 p-4">
@@ -161,7 +174,6 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
                   <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Original Input
                   </h2>
-
                   {originalInput.length > 400 && (
                     <Button
                       variant="outline"
@@ -194,7 +206,6 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
                   <p className="text-sm leading-relaxed text-gray-800 whitespace-pre-wrap">
                     {originalInput}
                   </p>
-
                   {!expandedInput && originalInput.length > 400 && (
                     <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-gray-100 to-transparent pointer-events-none" />
                   )}
@@ -208,22 +219,14 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
                   onChange={(e) => setInput(e.target.value)}
                   className="min-h-[120px] max-h-[45vh] overflow-y-auto resize-none [field-sizing:fixed]"
                 />
-
-                <Button
-                  onClick={handleSubmit}
-                  disabled={loading}
-                  className="w-full"
-                >
+                <Button onClick={handleSubmit} disabled={loading} className="w-full">
                   {loading ? "Generating..." : "Generate Summary"}
                 </Button>
               </>
             )}
           </div>
 
-          {/* ERROR */}
-          {error && (
-            <p className="text-sm text-red-500 text-center">{error}</p>
-          )}
+          {error && <p className="text-sm text-red-500 text-center">{error}</p>}
 
           {/* OUTPUT */}
           {data && (
@@ -241,58 +244,70 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon">
-                        {copiedSummary ? (
-                          <Check className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
+                        {copiedSummary ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
                       </Button>
                     </DropdownMenuTrigger>
 
                     <DropdownMenuContent align="end" className="w-32">
-                      <DropdownMenuItem onClick={() => copySummary("text")}>
-                        Text
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => copySummary("html")}>
-                        HTML
-                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => copySummary("text")}>Text</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => copySummary("html")}>HTML</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
 
-                <p className="text-sm leading-relaxed text-gray-800 whitespace-pre-wrap">
-                  {data.projectSummary}
-                </p>
+                {Array.isArray(data.projectSummary) ? (
+                  <ul className="list-disc pl-5 space-y-1">
+                    {data.projectSummary.map((bullet, idx) => (
+                      <li key={idx} className="text-sm leading-relaxed text-gray-800">
+                        {bullet}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm leading-relaxed text-gray-800 whitespace-pre-wrap">
+                    {data.projectSummary}
+                  </p>
+                )}
 
+                {/* AI ACTION BUTTONS */}
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="hover:bg-gray-100 transition-colors"
-                    onClick={() => handleTransform("simplify")}
-                    disabled={transforming || appliedTransform !== null}
-                  >
-                    Make it less technical
-                  </Button>
+                  {!originalSummaryForUndo ? (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAIAction("/api/summarise/less-technical")}
+                        disabled={actionLoading}
+                      >
+                        {actionLoading ? "Rewriting..." : "Make it less technical"}
+                      </Button>
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="hover:bg-gray-100 transition-colors"
-                    onClick={() => handleTransform("impact")}
-                    disabled={transforming || appliedTransform !== null}
-                  >
-                    Make it more impactful
-                  </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAIAction("/api/summarise/more-impactful")}
+                        disabled={actionLoading}
+                      >
+                        {actionLoading ? "Rewriting..." : "Make it more impactful"}
+                      </Button>
 
-                  {appliedTransform && originalSummary && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAIAction("/api/summarise/bullets")}
+                        disabled={actionLoading}
+                      >
+                        {actionLoading ? "Generating bullets..." : "Rewrite as Bullet Points"}
+                      </Button>
+                    </>
+                  ) : (
                     <Button
                       variant="outline"
                       size="sm"
-                      className="hover:bg-gray-100 transition-colors"
-                      onClick={handleUndo}
+                      onClick={handleRevert}
+                      disabled={actionLoading}
                     >
-                      Revert to original
+                      Revert to Original
                     </Button>
                   )}
                 </div>
@@ -312,21 +327,13 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon">
-                          {copiedSkills ? (
-                            <Check className="h-4 w-4 text-green-600" />
-                          ) : (
-                            <Copy className="h-4 w-4" />
-                          )}
+                          {copiedSkills ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
                         </Button>
                       </DropdownMenuTrigger>
 
                       <DropdownMenuContent align="end" className="w-32">
-                        <DropdownMenuItem onClick={() => copySkills("text")}>
-                          Text
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => copySkills("html")}>
-                          HTML
-                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => copySkills("text")}>Text</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => copySkills("html")}>HTML</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
