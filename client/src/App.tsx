@@ -31,6 +31,10 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
 
   const [simplifying, setSimplifying] = useState(false);
+  const [originalSummaryForUndo, setOriginalSummaryForUndo] =
+    useState<SummaryResponse | null>(null);
+  const [hasSimplified, setHasSimplified] = useState(false);
+  const [hasReverted, setHasReverted] = useState(false);
 
   const [copiedSummary, setCopiedSummary] = useState(false);
   const [copiedSkills, setCopiedSkills] = useState(false);
@@ -42,6 +46,9 @@ export default function App() {
     setError(null);
     setData(null);
     setExpandedInput(false);
+    setOriginalSummaryForUndo(null);
+    setHasSimplified(false);
+    setHasReverted(false);
 
     const submittedText = input;
     setOriginalInput(submittedText);
@@ -99,31 +106,46 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
     setTimeout(() => setCopiedSkills(false), 1500);
   };
 
-  const handleSimplify = async () => {
-    if (!data || !originalInput) return;
+  const handleSimplifyToggle = async () => {
+    if (!data || !originalInput || simplifying) return;
 
-    setSimplifying(true);
-    setError(null);
+    // First click: simplify (server call)
+    if (!hasSimplified) {
+      setOriginalSummaryForUndo(data);
+      setSimplifying(true);
+      setError(null);
 
-    try {
-      const res = await fetch("/api/summarise/less-technical", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: originalInput,
-          projectSummary: data.projectSummary,
-          keySkills: data.keySkills,
-        }),
-      });
+      try {
+        const res = await fetch("/api/summarise/less-technical", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: originalInput,
+            projectSummary: data.projectSummary,
+            keySkills: data.keySkills,
+          }),
+        });
 
-      if (!res.ok) throw new Error("Server error");
+        if (!res.ok) throw new Error("Server error");
 
-      const json: SummaryResponse = await res.json();
-      setData(json);
-    } catch {
-      setError("Failed to simplify summary");
-    } finally {
-      setSimplifying(false);
+        const json: SummaryResponse = await res.json();
+        setData(json);
+        setHasSimplified(true);
+      } catch {
+        setError("Failed to simplify summary");
+        setOriginalSummaryForUndo(null);
+      } finally {
+        setSimplifying(false);
+      }
+
+      return;
+    }
+
+    // Second click: one-time undo back to original (no server call)
+    if (hasSimplified && !hasReverted && originalSummaryForUndo) {
+      setData(originalSummaryForUndo);
+      setHasReverted(true);
+      return;
     }
   };
 
@@ -252,10 +274,16 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
                   variant="outline"
                   size="sm"
                   className="mt-3 hover:bg-gray-100 transition-colors"
-                  onClick={handleSimplify}
-                  disabled={simplifying}
+                  onClick={handleSimplifyToggle}
+                  disabled={simplifying || (hasSimplified && hasReverted)}
                 >
-                  {simplifying ? "Rewriting..." : "Make it less technical"}
+                  {simplifying
+                    ? "Rewriting..."
+                    : !hasSimplified
+                    ? "Make it less technical"
+                    : hasReverted
+                    ? "Original restored"
+                    : "Revert to original wording"}
                 </Button>
               </section>
 
