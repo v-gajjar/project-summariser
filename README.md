@@ -23,15 +23,27 @@ cd project-summariser
 
 ### 2. Install dependencies
 
-```bash
-pnpm install
-```
+Open **two terminal windows**:
 
-> PNPM will install dependencies for both `client` and `server` because of the workspace setup (`pnpm-workspace.yaml`).
+# Client
+
+```bash
+cd client
+pnpm install
+````
+
+
+# Server 
+
+```bash
+cd server
+pnpm install
+````
+
 
 ### 3. Set up environment variables
 
-Create a `.env` file inside the `server/` folder with your Tetrate API key:
+Create a `.env` file inside the `root` folder with your Tetrate API key:
 
 ```env
 OPENAI_API_KEY=your_tetrate_api_key_here
@@ -45,14 +57,14 @@ Open **two terminal windows**:
 
 ```bash
 cd server
-pnpm start
+pnpm run dev
 ```
 
 **Client:**
 
 ```bash
 cd client
-pnpm dev
+pnpm run dev
 ```
 
 > The client usually runs on `http://localhost:5173` and the server on `http://localhost:3000`.
