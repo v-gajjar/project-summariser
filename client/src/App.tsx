@@ -12,7 +12,7 @@ import {
 } from "./components/ui/dropdown-menu";
 
 type SummaryResponse = {
-  projectSummary: string | string[]; // can now be array for bullets
+  projectSummary: string | string[];
   keySkills: string[];
 };
 
@@ -25,15 +25,13 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Unified action state
   const [actionLoading, setActionLoading] = useState(false);
   const [originalSummaryForUndo, setOriginalSummaryForUndo] = useState<SummaryResponse | null>(null);
 
   const [copiedSummary, setCopiedSummary] = useState(false);
   const [copiedSkills, setCopiedSkills] = useState(false);
 
-  // -------------------------
-  // SUBMIT INITIAL SUMMARY
-  // -------------------------
   const handleSubmit = async () => {
     if (!input.trim()) return;
 
@@ -65,9 +63,6 @@ export default function App() {
     }
   };
 
-  // -------------------------
-  // COPY FUNCTIONS
-  // -------------------------
   const copySummary = async (mode: "text" | "html") => {
     if (!data) return;
 
@@ -111,17 +106,12 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
     setTimeout(() => setCopiedSkills(false), 1500);
   };
 
-  // -------------------------
-  // GENERIC AI ACTION HANDLER
-  // -------------------------
   const handleAIAction = async (endpoint: string) => {
-    if (!data || !originalInput || actionLoading) return;
-
-    // Save original summary for undo if not already saved
-    if (!originalSummaryForUndo) setOriginalSummaryForUndo(data);
+    if (!data || !originalInput) return;
 
     setActionLoading(true);
     setError(null);
+    setOriginalSummaryForUndo(data); // save for undo
 
     try {
       const res = await fetch(endpoint, {
@@ -139,15 +129,12 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
       const json: SummaryResponse = await res.json();
       setData(json);
     } catch {
-      setError("Failed to process AI action");
+      setError("Failed to refine summary");
     } finally {
       setActionLoading(false);
     }
   };
 
-  // -------------------------
-  // REVERT / UNDO ACTION
-  // -------------------------
   const handleRevert = () => {
     if (!originalSummaryForUndo) return;
 
@@ -155,9 +142,6 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
     setOriginalSummaryForUndo(null);
   };
 
-  // -------------------------
-  // RENDER
-  // -------------------------
   return (
     <div className="h-screen flex items-center justify-center bg-gray-50 p-4">
       <Card className="w-full max-w-lg h-full max-h-[90vh] shadow-xl rounded-2xl flex flex-col">
@@ -195,7 +179,6 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
                     </Button>
                   )}
                 </div>
-
                 <div
                   className={`relative transition-all ${
                     expandedInput
@@ -244,7 +227,11 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon">
-                        {copiedSummary ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                        {copiedSummary ? (
+                          <Check className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
                       </Button>
                     </DropdownMenuTrigger>
 
@@ -269,9 +256,12 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
                   </p>
                 )}
 
-                {/* AI ACTION BUTTONS */}
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {!originalSummaryForUndo ? (
+                  {originalSummaryForUndo ? (
+                    <Button variant="outline" size="sm" onClick={handleRevert} disabled={actionLoading}>
+                      Revert to Original
+                    </Button>
+                  ) : (
                     <>
                       <Button
                         variant="outline"
@@ -279,7 +269,7 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
                         onClick={() => handleAIAction("/api/summarise/less-technical")}
                         disabled={actionLoading}
                       >
-                        {actionLoading ? "Rewriting..." : "Make it less technical"}
+                        {actionLoading ? "Refining Summary..." : "Make it less technical"}
                       </Button>
 
                       <Button
@@ -288,7 +278,7 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
                         onClick={() => handleAIAction("/api/summarise/more-impactful")}
                         disabled={actionLoading}
                       >
-                        {actionLoading ? "Rewriting..." : "Make it more impactful"}
+                        {actionLoading ? "Refining Summary..." : "Make it more impactful"}
                       </Button>
 
                       <Button
@@ -297,18 +287,9 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
                         onClick={() => handleAIAction("/api/summarise/bullets")}
                         disabled={actionLoading}
                       >
-                        {actionLoading ? "Generating bullets..." : "Rewrite as Bullet Points"}
+                        {actionLoading ? "Refining Summary..." : "Rewrite as Bullet Points"}
                       </Button>
                     </>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleRevert}
-                      disabled={actionLoading}
-                    >
-                      Revert to Original
-                    </Button>
                   )}
                 </div>
               </section>
@@ -327,7 +308,11 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon">
-                          {copiedSkills ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                          {copiedSkills ? (
+                            <Check className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
                         </Button>
                       </DropdownMenuTrigger>
 
@@ -340,10 +325,7 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
 
                   <ul className="flex flex-wrap gap-2">
                     {data.keySkills.map((skill) => (
-                      <li
-                        key={skill}
-                        className="px-3 py-1 text-xs rounded-full bg-blue-100 text-blue-700"
-                      >
+                      <li key={skill} className="px-3 py-1 text-xs rounded-full bg-blue-100 text-blue-700">
                         {skill}
                       </li>
                     ))}
@@ -357,3 +339,4 @@ ${data.keySkills.map((s) => `    <li>${s}</li>`).join("\n")}
     </div>
   );
 }
+
